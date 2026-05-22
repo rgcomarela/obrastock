@@ -282,6 +282,105 @@ dialog::backdrop { background: rgba(8, 13, 20, .58); }
 .toast.show { transform: translateY(0); }
 #printArea { display: none; }
 
+.custody-hero {
+  display: grid;
+  grid-template-columns: 1fr 170px 190px;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.custody-hero > div {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--yellow);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+.custody-hero strong, .custody-hero b {
+  display: block;
+  font-size: 22px;
+}
+.custody-hero span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.custody-list {
+  display: grid;
+  gap: 12px;
+}
+.custody-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+.custody-card header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.custody-card h3 {
+  margin: 0 0 4px;
+}
+.custody-card header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.custody-items {
+  display: grid;
+  gap: 8px;
+}
+.custody-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel), var(--bg) 24%);
+}
+.custody-item.late {
+  border-color: var(--yellow);
+}
+.custody-item strong {
+  display: block;
+}
+.custody-item span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.custody-card footer {
+  margin-top: 10px;
+}
+.signature-status {
+  margin-bottom: 10px;
+}
+.signature-form canvas {
+  width: 100%;
+  height: 220px;
+  border: 2px dashed var(--line);
+  border-radius: 8px;
+  background: #fff;
+  touch-action: none;
+}
+.report-signatures {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 10px 0 24px;
+}
+.report-signatures div {
+  border: 1px solid #9aa6b2;
+  padding: 8px;
+  min-height: 110px;
+}
+.report-signatures img {
+  display: block;
+  max-width: 100%;
+  max-height: 82px;
+  margin-top: 6px;
+}
+
 @media (max-width: 980px) {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar {
@@ -300,6 +399,9 @@ dialog::backdrop { background: rgba(8, 13, 20, .58); }
   .top-actions button, .toolbar button, .report-actions button { flex: 1 1 140px; }
   .main-nav { grid-template-columns: repeat(2, 1fr); }
   .metrics-grid, .cards-grid, .reports-grid, .dashboard-grid, .flow-grid { grid-template-columns: 1fr; }
+  .custody-hero { grid-template-columns: 1fr; }
+  .custody-card header { grid-template-columns: auto 1fr; }
+  .custody-card header button { grid-column: 1 / -1; }
   .item-picker, .return-row .controls { grid-template-columns: 1fr; }
   table { min-width: 640px; }
 }
@@ -336,5 +438,7 @@ dialog::backdrop { background: rgba(8, 13, 20, .58); }
   .receipt-page table { min-width: 0; font-size: 12px; }
   .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 42px; }
   .signature { border-top: 1px solid #111; text-align: center; padding-top: 8px; min-height: 56px; }
+  .report-signatures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .report-signatures img { max-height: 80px; }
   .no-print { display: none !important; }
 }

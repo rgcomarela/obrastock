@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10243f">
-  <title>ObraStock | Almoxarifado de Campo</title>
+  <title>ObraStock | Cautela Digital</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -15,7 +15,7 @@
         <div class="brand-mark">OS</div>
         <div>
           <h1>ObraStock</h1>
-          <p>Controle de almoxarifado, ferramentas e responsabilidade de campo.</p>
+          <p>Cautela digital para ferramentas, EPIs e equipes de campo.</p>
         </div>
       </div>
       <form id="loginForm" class="login-form">
@@ -25,7 +25,7 @@
         <label>Senha
           <input id="loginPass" type="password" autocomplete="current-password" required value="admin123">
         </label>
-        <button class="primary large" type="submit">Entrar no sistema</button>
+        <button class="primary large" type="submit">Entrar</button>
       </form>
       <p class="hint">Acesso inicial: admin / admin123</p>
     </section>
@@ -37,15 +37,16 @@
         <div class="brand-mark">OS</div>
         <div>
           <strong>ObraStock</strong>
-          <span id="currentUserLabel">Administrador</span>
+          <span id="currentUserLabel">online</span>
         </div>
       </div>
       <nav id="mainNav" class="main-nav">
         <button data-view="dashboard" class="active">Painel</button>
+        <button data-view="custody">Cautelas</button>
+        <button data-view="withdraw">Entregar</button>
+        <button data-view="return">Devolver</button>
         <button data-view="employees">Funcionários</button>
-        <button data-view="inventory">Materiais</button>
-        <button data-view="withdraw">Retirada</button>
-        <button data-view="return">Devolução</button>
+        <button data-view="inventory">Itens</button>
         <button data-view="history">Histórico</button>
         <button data-view="reports">Relatórios</button>
         <button data-view="settings">Acessos</button>
@@ -64,82 +65,75 @@
       <header class="topbar">
         <div>
           <h2 id="viewTitle">Painel</h2>
-          <p id="viewSubtitle">Visão geral do almoxarifado e últimas movimentações.</p>
+          <p id="viewSubtitle">Responsabilidade de posse em tempo real.</p>
         </div>
         <div class="top-actions">
-          <button id="scanBtn" class="secondary">Ler código</button>
-          <button id="quickWithdrawBtn" class="primary">Nova retirada</button>
+          <button id="quickReturnBtn" class="secondary">Devolver</button>
+          <button id="quickWithdrawBtn" class="primary">Entregar item</button>
         </div>
       </header>
 
       <section id="dashboard" class="view active">
         <div class="metrics-grid">
-          <article class="metric"><span>Total de itens</span><strong id="metricItems">0</strong></article>
-          <article class="metric"><span>Em posse</span><strong id="metricBorrowed">0</strong></article>
-          <article class="metric"><span>Atrasados</span><strong id="metricLate">0</strong></article>
-          <article class="metric warning"><span>Estoque baixo</span><strong id="metricLow">0</strong></article>
+          <article class="metric"><span>Itens em posse</span><strong id="metricBorrowed">0</strong></article>
+          <article class="metric"><span>Cautelas abertas</span><strong id="metricCustodies">0</strong></article>
+          <article class="metric warning"><span>Atrasados</span><strong id="metricLate">0</strong></article>
+          <article class="metric"><span>Avariados/manutenção</span><strong id="metricDamaged">0</strong></article>
         </div>
         <div class="dashboard-grid">
           <section class="panel">
-            <div class="panel-head"><h3>Últimas movimentações</h3></div>
+            <div class="panel-head"><h3>Últimos empréstimos</h3></div>
             <div id="recentMovements" class="activity-list"></div>
           </section>
           <section class="panel">
-            <div class="panel-head"><h3>Alertas de estoque</h3></div>
+            <div class="panel-head"><h3>Estoque baixo</h3></div>
             <div id="lowStockList" class="compact-list"></div>
           </section>
           <section class="panel wide">
-            <div class="panel-head"><h3>Uso por categoria</h3></div>
+            <div class="panel-head"><h3>Ferramentas mais utilizadas</h3></div>
             <div id="categoryChart" class="bar-chart"></div>
           </section>
         </div>
       </section>
 
-      <section id="employees" class="view">
+      <section id="custody" class="view">
         <div class="toolbar">
-          <input id="employeeSearch" class="search" placeholder="Pesquisar por nome, CPF, cargo ou equipe">
-          <button id="newEmployeeBtn" class="primary">Novo funcionário</button>
+          <input id="custodySearch" class="search" placeholder="Pesquisar funcionário ou equipe">
+          <select id="custodyEmployee"></select>
+          <button id="signTodayBtn" class="primary">Assinar hoje</button>
         </div>
-        <div id="employeeList" class="cards-grid"></div>
-      </section>
-
-      <section id="inventory" class="view">
-        <div class="toolbar">
-          <input id="itemSearch" class="search" placeholder="Pesquisar por nome, código, categoria ou local">
-          <button id="newItemBtn" class="primary">Novo item</button>
-        </div>
-        <div id="itemList" class="table-wrap"></div>
+        <div id="custodySummary" class="custody-hero"></div>
+        <div id="custodyList" class="custody-list"></div>
       </section>
 
       <section id="withdraw" class="view flow-view">
         <div class="flow-grid">
           <section class="panel">
-            <div class="panel-head"><h3>Retirada rápida</h3></div>
+            <div class="panel-head"><h3>Entrega rápida</h3></div>
             <form id="withdrawForm" class="stack-form">
               <label>Funcionário
                 <select id="withdrawEmployee" required></select>
               </label>
-              <div class="item-picker">
-                <label>Material ou ferramenta
-                  <select id="withdrawItem"></select>
-                </label>
-                <label>Quantidade
-                  <input id="withdrawQty" type="number" min="0.01" step="0.01" value="1">
-                </label>
-                <button id="addWithdrawItem" class="secondary" type="button">Adicionar</button>
-              </div>
+              <label>Pesquisar item
+                <input id="withdrawSearch" list="withdrawItemOptions" placeholder="Digite o nome do item" required>
+                <datalist id="withdrawItemOptions"></datalist>
+              </label>
+              <label>Quantidade
+                <input id="withdrawQty" type="number" min="0.01" step="0.01" value="1">
+              </label>
               <label>Responsável pela entrega
                 <input id="withdrawKeeper" required placeholder="Nome do almoxarife">
               </label>
               <label>Observações
-                <textarea id="withdrawNotes" rows="3" placeholder="Ex.: obra, frente de serviço, condição do item"></textarea>
+                <textarea id="withdrawNotes" rows="3" placeholder="Condição, frente de serviço ou detalhe importante"></textarea>
               </label>
-              <button class="primary large" type="submit">Registrar retirada e imprimir</button>
+              <button class="primary large" type="submit">ENTREGAR</button>
             </form>
           </section>
           <section class="panel">
-            <div class="panel-head"><h3>Itens do comprovante</h3></div>
-            <div id="withdrawCart" class="receipt-cart"></div>
+            <div class="panel-head"><h3>Assinatura diária</h3></div>
+            <div id="withdrawSignatureStatus" class="signature-status"></div>
+            <div id="withdrawItemPreview" class="compact-list"></div>
           </section>
         </div>
       </section>
@@ -147,7 +141,7 @@
       <section id="return" class="view flow-view">
         <div class="flow-grid">
           <section class="panel">
-            <div class="panel-head"><h3>Devolução</h3></div>
+            <div class="panel-head"><h3>Devolução rápida</h3></div>
             <form id="returnForm" class="stack-form">
               <label>Funcionário
                 <select id="returnEmployee" required></select>
@@ -158,7 +152,7 @@
               <label>Observações gerais
                 <textarea id="returnNotes" rows="3"></textarea>
               </label>
-              <button class="primary large" type="submit">Registrar devolução e imprimir</button>
+              <button class="primary large" type="submit">CONFIRMAR DEVOLUÇÃO</button>
             </form>
           </section>
           <section class="panel">
@@ -168,23 +162,46 @@
         </div>
       </section>
 
+      <section id="employees" class="view">
+        <div class="toolbar">
+          <input id="employeeSearch" class="search" placeholder="Pesquisar por nome, cargo ou equipe">
+          <button id="newEmployeeBtn" class="primary">Novo funcionário</button>
+        </div>
+        <div id="employeeList" class="cards-grid"></div>
+      </section>
+
+      <section id="inventory" class="view">
+        <div class="toolbar">
+          <input id="itemSearch" class="search" placeholder="Pesquisar por nome, código, categoria ou status">
+          <button id="newItemBtn" class="primary">Novo item</button>
+        </div>
+        <div id="itemList" class="table-wrap"></div>
+      </section>
+
       <section id="history" class="view">
         <div class="toolbar filters">
           <input id="historySearch" class="search" placeholder="Filtrar funcionário, item, protocolo ou usuário">
           <input id="historyDate" type="date">
           <select id="historyType">
             <option value="">Todos os tipos</option>
-            <option value="RETIRADA">Retiradas</option>
+            <option value="RETIRADA">Entregas</option>
             <option value="DEVOLUCAO">Devoluções</option>
+            <option value="ASSINATURA">Assinaturas</option>
           </select>
-          <label class="check"><input id="onlyOpen" type="checkbox"> Itens não devolvidos</label>
+          <label class="check"><input id="onlyOpen" type="checkbox"> Apenas em posse</label>
         </div>
         <div id="historyTable" class="table-wrap"></div>
       </section>
 
       <section id="reports" class="view">
-        <div class="report-actions">
-          <button id="printReportBtn" class="primary">Gerar PDF</button>
+        <div class="toolbar filters">
+          <select id="reportType">
+            <option value="weekly">Relatório semanal</option>
+            <option value="monthly">Relatório mensal</option>
+            <option value="individual">Relatório individual</option>
+          </select>
+          <select id="reportEmployee"></select>
+          <button id="printReportBtn" class="primary">Gerar PDF A4</button>
           <button id="exportExcelBtn" class="secondary">Exportar Excel</button>
         </div>
         <div id="reportsContent" class="reports-grid"></div>
@@ -203,11 +220,10 @@
     <form id="employeeForm" method="dialog" class="modal-form">
       <h3>Funcionário</h3>
       <input type="hidden" id="employeeId">
-      <label>Nome completo<input id="employeeName" required></label>
-      <label>CPF<input id="employeeCpf" required></label>
+      <label>Nome<input id="employeeName" required></label>
       <label>Cargo<input id="employeeRole"></label>
       <label>Telefone<input id="employeePhone"></label>
-      <label>Empresa/equipe<input id="employeeTeam"></label>
+      <label>Equipe<input id="employeeTeam"></label>
       <label>Status<select id="employeeStatus"><option>Ativo</option><option>Inativo</option></select></label>
       <label>Foto opcional<input id="employeePhoto" type="file" accept="image/*"></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>Cancelar</button><button class="primary" value="default">Salvar</button></div>
@@ -216,21 +232,18 @@
 
   <dialog id="itemDialog">
     <form id="itemForm" method="dialog" class="modal-form">
-      <h3>Item do almoxarifado</h3>
+      <h3>Item</h3>
       <input type="hidden" id="itemId">
       <label>Nome do item<input id="itemName" required></label>
-      <label>Código interno<input id="itemCode" required></label>
-      <label>Categoria<input id="itemCategory" list="categoryOptions" required></label>
-      <datalist id="categoryOptions">
-        <option value="Ferramenta"><option value="EPI"><option value="Material elétrico"><option value="Material hidráulico"><option value="Consumível"><option value="Máquina">
-      </datalist>
-      <label>Quantidade em estoque<input id="itemStock" type="number" min="0" step="0.01" required></label>
+      <label>Código interno opcional<input id="itemCode"></label>
+      <label>Categoria<select id="itemCategory"><option>Ferramenta</option><option>EPI</option><option>Material</option></select></label>
+      <label>Quantidade<input id="itemStock" type="number" min="0" step="0.01" required></label>
       <label>Unidade<input id="itemUnit" list="unitOptions" required></label>
-      <datalist id="unitOptions"><option value="unidade"><option value="metro"><option value="saco"><option value="caixa"><option value="par"><option value="rolo"></datalist>
-      <label>Estado<select id="itemCondition"><option>Novo</option><option>Usado</option><option>Avariado</option></select></label>
-      <label>Valor estimado<input id="itemValue" type="number" min="0" step="0.01"></label>
-      <label>Localização no estoque<input id="itemLocation"></label>
-      <label>Foto do item<input id="itemPhoto" type="file" accept="image/*"></label>
+      <datalist id="unitOptions"><option value="unidade"><option value="metro"><option value="caixa"><option value="par"><option value="rolo"></datalist>
+      <label>Estado<select id="itemCondition"><option>Normal</option><option>Novo</option><option>Usado</option><option>Avariado</option><option>Em manutenção</option></select></label>
+      <label>Status<select id="itemStatus"><option>Disponível</option><option>Emprestado</option><option>Avariado</option><option>Em manutenção</option></select></label>
+      <label>Observações<textarea id="itemNotes" rows="3"></textarea></label>
+      <label>Foto opcional<input id="itemPhoto" type="file" accept="image/*"></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>Cancelar</button><button class="primary" value="default">Salvar</button></div>
     </form>
   </dialog>
@@ -247,13 +260,18 @@
     </form>
   </dialog>
 
-  <dialog id="scanDialog">
-    <div class="modal-form">
-      <h3>Leitura de código</h3>
-      <video id="scanVideo" playsinline></video>
-      <input id="manualCode" placeholder="Digite ou cole o código">
-      <div class="modal-actions"><button id="stopScanBtn" class="ghost">Fechar</button><button id="useManualCode" class="primary">Pesquisar</button></div>
-    </div>
+  <dialog id="signatureDialog">
+    <form id="signatureForm" method="dialog" class="modal-form signature-form">
+      <h3>Assinatura diária</h3>
+      <input type="hidden" id="signatureEmployeeId">
+      <p id="signatureEmployeeName" class="meta"></p>
+      <canvas id="signaturePad" width="720" height="260"></canvas>
+      <div class="modal-actions">
+        <button id="clearSignatureBtn" type="button" class="ghost">Limpar</button>
+        <button type="button" class="ghost" data-close>Cancelar</button>
+        <button class="primary" value="default">Salvar assinatura</button>
+      </div>
+    </form>
   </dialog>
 
   <div id="printArea"></div>

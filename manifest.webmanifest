@@ -1,7 +1,7 @@
 {
-  "name": "ObraStock - Almoxarifado de Campo",
+  "name": "ObraStock - Cautela Digital",
   "short_name": "ObraStock",
-  "description": "Controle responsivo de almoxarifado, ferramentas, retiradas, devoluções e comprovantes.",
+  "description": "Cautela digital responsiva para ferramentas, EPIs, retiradas, devoluções e assinaturas diárias.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f3f5f7",
