@@ -33,6 +33,9 @@ let activeView = "dashboard";
 let cloudReady = false;
 let signaturePad = null;
 let selectedCustodyEmployeeId = "";
+let deliveryCart = [];
+let deliveryCartEmployeeId = "";
+let pendingDeliveryAfterSignature = false;
 
 const $ = (id) => document.getElementById(id);
 const num = (v) => Number.parseFloat(v || 0);
@@ -198,6 +201,7 @@ function render() {
   renderEmployees();
   renderItems();
   renderWithdrawPreview();
+  renderDeliveryCart();
   renderReturnItems();
   renderHistory();
   renderReports();
@@ -398,6 +402,18 @@ function renderWithdrawPreview() {
   `).join("") || empty("Este funcionário não tem itens em posse.");
 }
 
+function renderDeliveryCart() {
+  const employee = employeeById(deliveryCartEmployeeId || $("withdrawEmployee").value);
+  $("withdrawPendingList").innerHTML = deliveryCart.map((row, index) => `
+    <div class="compact-row delivery-row">
+      <strong>${escapeHtml(row.name)}</strong>
+      <span>${row.qty} ${escapeHtml(row.unit)} para ${escapeHtml(employee?.name || "funcionário selecionado")}</span>
+      <button class="ghost danger mini-button" onclick="removeDeliveryItem(${index})" type="button">Remover</button>
+    </div>
+  `).join("") || empty("Nenhum item adicionado nesta entrega.");
+  $("finishWithdrawBtn").disabled = deliveryCart.length === 0;
+}
+
 function renderReturnItems() {
   const employeeId = $("returnEmployee").value;
   const loans = employeeId ? openLoans(employeeId) : [];
@@ -475,30 +491,65 @@ function findItemBySearch(value) {
     db.items.find((i) => `${i.name} ${i.code}`.toLowerCase().includes(term));
 }
 
-async function registerWithdraw(event) {
+function addDeliveryItem(event) {
   event.preventDefault();
   if (!ensureEdit()) return;
   const employee = employeeById($("withdrawEmployee").value);
   const item = findItemBySearch($("withdrawSearch").value);
   const qty = num($("withdrawQty").value);
   if (!employee || !item || qty <= 0) return toast("Informe funcionário, item e quantidade.");
-  if (qty > num(item.stock)) return toast("Quantidade maior que o disponível.");
+  if (deliveryCartEmployeeId && deliveryCartEmployeeId !== employee.id) {
+    return toast("Finalize ou limpe a entrega atual antes de trocar o funcionário.");
+  }
+  const alreadyInCart = deliveryCart.filter((row) => row.itemId === item.id).reduce((sum, row) => sum + num(row.qty), 0);
+  if (qty + alreadyInCart > num(item.stock)) return toast("Quantidade maior que o disponível.");
   if (["Avariado", "Em manutenção"].includes(item.status)) return toast("Item indisponível.");
-  const signature = dailySignature(employee.id);
+  deliveryCartEmployeeId = employee.id;
+  deliveryCart.push({ itemId: item.id, name: item.name, code: item.code, category: item.category, qty, unit: item.unit, condition: item.condition, status: "EM POSSE" });
+  $("withdrawSearch").value = "";
+  $("withdrawQty").value = 1;
+  renderWithdrawPreview();
+  renderDeliveryCart();
+  toast("Item adicionado à lista de entrega.");
+}
+
+window.removeDeliveryItem = (index) => {
+  deliveryCart.splice(index, 1);
+  if (!deliveryCart.length) deliveryCartEmployeeId = "";
+  renderDeliveryCart();
+};
+
+function finalizeDelivery() {
+  if (!ensureEdit()) return;
+  if (!deliveryCart.length) return toast("Adicione pelo menos um item.");
+  const employee = employeeById(deliveryCartEmployeeId);
+  if (!employee) return toast("Funcionário da entrega não encontrado.");
+  pendingDeliveryAfterSignature = true;
+  openSignature(employee.id);
+}
+
+function completeDeliveryAfterSignature(signature) {
+  const employee = employeeById(deliveryCartEmployeeId);
+  if (!employee || !deliveryCart.length) return false;
   const movement = {
     id: crypto.randomUUID(), type: "RETIRADA", protocol: protocol("RETIRADA"), date: new Date().toISOString(),
     employeeId: employee.id, employeeName: employee.name, keeper: $("withdrawKeeper").value.trim(),
-    userId: currentUser.id, userName: currentUser.name, notes: $("withdrawNotes").value.trim(), signatureId: signature?.id || "",
-    items: [{ itemId: item.id, name: item.name, code: item.code, category: item.category, qty, unit: item.unit, condition: item.condition, status: "EM POSSE" }]
+    userId: currentUser.id, userName: currentUser.name, notes: $("withdrawNotes").value.trim(), signatureId: signature.id,
+    items: deliveryCart.map((row) => ({ ...row }))
   };
-  item.stock = roundQty(num(item.stock) - qty);
-  item.status = item.stock > 0 ? "Disponível" : "Emprestado";
+  movement.items.forEach((row) => {
+    const item = itemById(row.itemId);
+    if (!item) return;
+    item.stock = roundQty(num(item.stock) - num(row.qty));
+    item.status = item.stock > 0 ? "Disponível" : "Emprestado";
+  });
   db.movements.push(movement);
-  $("withdrawSearch").value = "";
-  $("withdrawQty").value = 1;
+  deliveryCart = [];
+  deliveryCartEmployeeId = "";
+  pendingDeliveryAfterSignature = false;
   $("withdrawNotes").value = "";
-  await saveDb();
-  toast(signature ? "Entrega registrada e vinculada à assinatura do dia." : "Entrega registrada. Assinatura diária pendente.");
+  renderDeliveryCart();
+  return true;
 }
 
 async function registerReturn(event) {
@@ -662,9 +713,12 @@ async function saveSignature(event) {
   db.movements
     .filter((m) => m.employeeId === employee.id && m.date?.slice(0, 10) === signature.date)
     .forEach((m) => { m.signatureId = signature.id; });
+  const deliveryFinished = pendingDeliveryAfterSignature && deliveryCartEmployeeId === employee.id
+    ? completeDeliveryAfterSignature(signature)
+    : false;
   $("signatureDialog").close();
   await saveDb();
-  toast("Assinatura diária salva.");
+  toast(deliveryFinished ? "Entrega finalizada com assinatura." : "Assinatura diária salva.");
 }
 
 function clearSignature() {
@@ -773,11 +827,18 @@ function wire() {
   $("restoreInput").addEventListener("change", restore);
   ["employeeSearch", "itemSearch", "historySearch", "custodySearch", "withdrawSearch"].forEach((id) => $(id).addEventListener("input", render));
   ["historyDate", "historyType", "onlyOpen", "returnEmployee", "reportType", "reportEmployee"].forEach((id) => $(id).addEventListener("change", render));
-  $("withdrawEmployee").addEventListener("change", renderWithdrawPreview);
+  $("withdrawEmployee").addEventListener("change", () => {
+    if (deliveryCart.length && $("withdrawEmployee").value !== deliveryCartEmployeeId) {
+      $("withdrawEmployee").value = deliveryCartEmployeeId;
+      toast("Finalize ou remova os itens antes de trocar o funcionário.");
+    }
+    renderWithdrawPreview();
+  });
   $("newEmployeeBtn").addEventListener("click", () => { if (ensureEdit()) { $("employeeForm").reset(); $("employeeId").value = ""; $("employeeDialog").showModal(); } });
   $("newItemBtn").addEventListener("click", () => { if (ensureEdit()) { $("itemForm").reset(); $("itemId").value = ""; $("itemDialog").showModal(); } });
   $("newUserBtn").addEventListener("click", () => { if (ensureEdit()) { $("userForm").reset(); $("userId").value = ""; $("userDialog").showModal(); } });
-  $("withdrawForm").addEventListener("submit", registerWithdraw);
+  $("withdrawForm").addEventListener("submit", addDeliveryItem);
+  $("finishWithdrawBtn").addEventListener("click", finalizeDelivery);
   $("returnForm").addEventListener("submit", registerReturn);
   $("employeeForm").addEventListener("submit", saveEmployee);
   $("itemForm").addEventListener("submit", saveItem);
@@ -786,7 +847,11 @@ function wire() {
   $("clearSignatureBtn").addEventListener("click", clearSignature);
   $("printReportBtn").addEventListener("click", printReport);
   $("exportExcelBtn").addEventListener("click", exportExcel);
-  document.querySelectorAll("[data-close]").forEach((btn) => btn.addEventListener("click", () => btn.closest("dialog").close()));
+  document.querySelectorAll("[data-close]").forEach((btn) => btn.addEventListener("click", () => {
+    const dialog = btn.closest("dialog");
+    if (dialog?.id === "signatureDialog") pendingDeliveryAfterSignature = false;
+    dialog.close();
+  }));
 }
 
 wire();

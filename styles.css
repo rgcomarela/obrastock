@@ -44,6 +44,10 @@ button {
   padding: 10px 14px;
   font-weight: 700;
 }
+button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
 input, select, textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -205,6 +209,22 @@ label {
   font-size: 12px;
   font-weight: 900;
   text-transform: uppercase;
+}
+.full-button {
+  width: 100%;
+  margin-top: 10px;
+}
+.delivery-row {
+  position: relative;
+  padding-right: 96px;
+}
+.mini-button {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 12px;
 }
 .attention-row {
   border-color: var(--yellow);

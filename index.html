@@ -125,13 +125,16 @@
               <label>Observações
                 <textarea id="withdrawNotes" rows="3" placeholder="Condição, frente de serviço ou detalhe importante"></textarea>
               </label>
-              <button class="primary large" type="submit">ENTREGAR</button>
+              <button class="primary large" type="submit">ADICIONAR</button>
             </form>
           </section>
           <section class="panel">
             <div class="panel-head"><h3>Cautela do funcionário</h3></div>
             <div id="withdrawSignatureStatus" class="signature-status"></div>
             <div id="withdrawItemPreview" class="compact-list"></div>
+            <div class="panel-subhead">Lista desta entrega</div>
+            <div id="withdrawPendingList" class="compact-list"></div>
+            <button id="finishWithdrawBtn" class="primary large full-button" type="button">FINALIZAR ENTREGA</button>
             <div class="panel-subhead">Itens já em posse</div>
             <div id="withdrawCurrentLoans" class="compact-list"></div>
           </section>
