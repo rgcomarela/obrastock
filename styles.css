@@ -199,6 +199,23 @@ label {
 }
 .activity strong, .compact-row strong { display: block; }
 .activity span, .compact-row span { color: var(--muted); font-size: 13px; }
+.panel-subhead {
+  margin: 14px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.attention-row {
+  border-color: var(--yellow);
+  background: color-mix(in srgb, var(--yellow), var(--panel) 82%);
+}
+.attention-row strong::after {
+  content: " já em posse";
+  color: #8c5d00;
+  font-size: 12px;
+  font-weight: 900;
+}
 .bar-chart { display: grid; gap: 10px; }
 .bar-row { display: grid; grid-template-columns: 150px 1fr 46px; gap: 10px; align-items: center; }
 .bar-track { height: 14px; background: var(--bg); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }

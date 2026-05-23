@@ -354,11 +354,24 @@ function renderWithdrawPreview() {
   const employeeId = $("withdrawEmployee").value;
   const employee = employeeById(employeeId);
   const signature = employeeId ? dailySignature(employeeId) : null;
+  const loans = employeeId ? openLoans(employeeId) : [];
   $("withdrawSignatureStatus").innerHTML = employee ? `
     <div class="compact-row"><strong>${escapeHtml(employee.name)}</strong><span>${signature ? "Assinatura de hoje já registrada." : "Assinatura de hoje pendente. A entrega pode ser vinculada depois da assinatura."}</span></div>
   ` : empty("Selecione um funcionário.");
   const item = findItemBySearch($("withdrawSearch").value);
-  $("withdrawItemPreview").innerHTML = item ? `<div class="compact-row"><strong>${escapeHtml(item.name)}</strong><span>${item.stock} ${escapeHtml(item.unit)} disponíveis - ${escapeHtml(item.status)}</span></div>` : empty("Pesquise um item pelo nome.");
+  const repeated = item ? loans.find((loan) => loan.itemId === item.id) : null;
+  $("withdrawItemPreview").innerHTML = item ? `
+    <div class="compact-row ${repeated ? "attention-row" : ""}">
+      <strong>${escapeHtml(item.name)}</strong>
+      <span>${item.stock} ${escapeHtml(item.unit)} disponíveis - ${escapeHtml(item.status)}${repeated ? ` - já está com ${repeated.openQty} ${escapeHtml(repeated.unit)}` : ""}</span>
+    </div>
+  ` : empty("Pesquise um item pelo nome.");
+  $("withdrawCurrentLoans").innerHTML = loans.map((loan) => `
+    <div class="compact-row ${item && loan.itemId === item.id ? "attention-row" : ""}">
+      <strong>${escapeHtml(loan.name)}</strong>
+      <span>${loan.openQty} ${escapeHtml(loan.unit)} - desde ${formatDate(loan.date)} - ${daysSince(loan.date)} dia(s)</span>
+    </div>
+  `).join("") || empty("Este funcionário não tem itens em posse.");
 }
 
 function renderReturnItems() {
