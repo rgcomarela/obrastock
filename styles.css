@@ -334,7 +334,7 @@ dialog::backdrop { background: rgba(8, 13, 20, .58); }
 }
 .custody-card header {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   gap: 12px;
   align-items: center;
   margin-bottom: 12px;
@@ -345,6 +345,30 @@ dialog::backdrop { background: rgba(8, 13, 20, .58); }
 .custody-card header span {
   color: var(--muted);
   font-size: 13px;
+}
+.custody-count {
+  min-width: 74px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg);
+}
+.custody-count strong {
+  display: block;
+  font-size: 24px;
+}
+.custody-count span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.custody-open {
+  margin-bottom: 14px;
+  border-left: 5px solid var(--yellow);
+}
+.custody-actions {
+  margin-bottom: 12px;
 }
 .custody-items {
   display: grid;
@@ -418,7 +442,7 @@ dialog::backdrop { background: rgba(8, 13, 20, .58); }
   .metrics-grid, .cards-grid, .reports-grid, .dashboard-grid, .flow-grid { grid-template-columns: 1fr; }
   .custody-hero { grid-template-columns: 1fr; }
   .custody-card header { grid-template-columns: auto 1fr; }
-  .custody-card header button { grid-column: 1 / -1; }
+  .custody-count, .custody-card header button { grid-column: 1 / -1; width: 100%; }
   .item-picker, .return-row .controls { grid-template-columns: 1fr; }
   table { min-width: 640px; }
 }

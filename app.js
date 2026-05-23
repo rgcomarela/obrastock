@@ -32,6 +32,7 @@ let currentUser = null;
 let activeView = "dashboard";
 let cloudReady = false;
 let signaturePad = null;
+let selectedCustodyEmployeeId = "";
 
 const $ = (id) => document.getElementById(id);
 const num = (v) => Number.parseFloat(v || 0);
@@ -247,7 +248,7 @@ function openLoans(employeeId = "") {
 function renderSelects() {
   const employees = activeEmployees();
   const employeeOptions = employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)} - ${escapeHtml(e.team || "sem equipe")}</option>`).join("");
-  ["withdrawEmployee", "returnEmployee", "custodyEmployee", "reportEmployee"].forEach((id) => {
+  ["withdrawEmployee", "returnEmployee", "reportEmployee"].forEach((id) => {
     const select = $(id);
     const selected = select.value;
     select.innerHTML = employeeOptions;
@@ -287,18 +288,15 @@ function renderUsageChart() {
 
 function renderCustody() {
   const search = $("custodySearch").value?.toLowerCase() || "";
-  const selectedId = $("custodyEmployee").value || activeEmployees()[0]?.id || "";
-  const employee = employeeById(selectedId);
-  const loans = selectedId ? openLoans(selectedId) : [];
-  const signature = selectedId ? dailySignature(selectedId) : null;
-  $("custodySummary").innerHTML = employee ? `
-    <div><strong>${escapeHtml(employee.name)}</strong><span>${escapeHtml(employee.role || "Sem cargo")} - ${escapeHtml(employee.team || "Sem equipe")}</span></div>
-    <div><b>${loans.length}</b><span>itens em posse</span></div>
-    <div><b>${signature ? "Assinado" : "Pendente"}</b><span>assinatura de hoje</span></div>
-  ` : empty("Selecione um funcionário.");
-  $("custodyList").innerHTML = activeEmployees()
-    .filter((e) => `${e.name} ${e.team} ${e.role}`.toLowerCase().includes(search))
-    .map((e) => custodyCard(e, openLoans(e.id), dailySignature(e.id)))
+  const employeesWithLoans = activeEmployees()
+    .map((employee) => ({ employee, loans: openLoans(employee.id), signature: dailySignature(employee.id) }))
+    .filter((row) => row.loans.length > 0)
+    .filter((row) => `${row.employee.name} ${row.employee.team} ${row.employee.role}`.toLowerCase().includes(search));
+  const selected = selectedCustodyEmployeeId ? employeesWithLoans.find((row) => row.employee.id === selectedCustodyEmployeeId) : null;
+  $("custodyDetail").classList.toggle("hidden", !selected);
+  $("custodyDetail").innerHTML = selected ? custodyDetail(selected.employee, selected.loans, selected.signature) : "";
+  $("custodyList").innerHTML = employeesWithLoans
+    .map((row) => custodyCard(row.employee, row.loans, row.signature))
     .join("") || empty("Nenhuma cautela encontrada.");
 }
 
@@ -307,22 +305,48 @@ function custodyCard(employee, loans, signature) {
     <header>
       ${employee.photo ? `<img class="avatar" src="${employee.photo}" alt="">` : `<div class="avatar">${initials(employee.name)}</div>`}
       <div><h3>${escapeHtml(employee.name)}</h3><span>${escapeHtml(employee.team || "sem equipe")} - ${escapeHtml(employee.role || "sem cargo")}</span></div>
+      <div class="custody-count"><strong>${loans.length}</strong><span>itens</span></div>
       <button class="secondary" onclick="selectCustody('${employee.id}')">Abrir</button>
     </header>
-    <div class="custody-items">${loans.map((l) => `
-      <div class="custody-item ${daysSince(l.date) > db.settings.lateDays ? "late" : ""}">
-        <strong>${escapeHtml(l.name)}</strong>
-        <span>${l.openQty} ${escapeHtml(l.unit)} - retirado em ${formatDate(l.date)} - ${daysSince(l.date)} dia(s)</span>
-      </div>`).join("") || `<div class="custody-item"><span>Sem itens em posse.</span></div>`}
-    </div>
     <footer><span class="tag ${signature ? "ok" : "warn"}">${signature ? "Assinatura diária registrada" : "Assinatura diária pendente"}</span></footer>
   </article>`;
 }
 
+function custodyDetail(employee, loans, signature) {
+  return `<section class="panel custody-open">
+    <div class="panel-head">
+      <div>
+        <h3>${escapeHtml(employee.name)}</h3>
+        <div class="meta">${escapeHtml(employee.team || "sem equipe")} - ${escapeHtml(employee.role || "sem cargo")} - ${loans.length} item(ns) em posse</div>
+      </div>
+      <button class="ghost" onclick="closeCustodyDetail()">Fechar</button>
+    </div>
+    <div class="row-actions custody-actions">
+      <button class="primary" onclick="openSignature('${employee.id}')">${signature ? "Reassinar hoje" : "Assinar hoje"}</button>
+      <button class="secondary" onclick="goReturnFromCustody('${employee.id}')">Devolver itens</button>
+    </div>
+    <div class="custody-items">${loans.map((l) => `
+      <div class="custody-item ${daysSince(l.date) > db.settings.lateDays ? "late" : ""}">
+        <strong>${escapeHtml(l.name)}</strong>
+        <span>${l.openQty} ${escapeHtml(l.unit)} - retirado em ${formatDate(l.date)} - ${daysSince(l.date)} dia(s) em posse</span>
+      </div>`).join("")}</div>
+  </section>`;
+}
+
 window.selectCustody = (employeeId) => {
-  $("custodyEmployee").value = employeeId;
+  selectedCustodyEmployeeId = employeeId;
   $("returnEmployee").value = employeeId;
   renderCustody();
+};
+
+window.closeCustodyDetail = () => {
+  selectedCustodyEmployeeId = "";
+  renderCustody();
+};
+
+window.goReturnFromCustody = (employeeId) => {
+  $("returnEmployee").value = employeeId;
+  setView("return");
 };
 
 function renderEmployees() {
@@ -587,7 +611,7 @@ window.editUser = (id) => {
 };
 
 window.openEmployeeCustody = (id) => {
-  $("custodyEmployee").value = id;
+  selectedCustodyEmployeeId = id;
   setView("custody");
 };
 
@@ -748,12 +772,11 @@ function wire() {
   $("backupBtn").addEventListener("click", backup);
   $("restoreInput").addEventListener("change", restore);
   ["employeeSearch", "itemSearch", "historySearch", "custodySearch", "withdrawSearch"].forEach((id) => $(id).addEventListener("input", render));
-  ["historyDate", "historyType", "onlyOpen", "returnEmployee", "custodyEmployee", "reportType", "reportEmployee"].forEach((id) => $(id).addEventListener("change", render));
+  ["historyDate", "historyType", "onlyOpen", "returnEmployee", "reportType", "reportEmployee"].forEach((id) => $(id).addEventListener("change", render));
   $("withdrawEmployee").addEventListener("change", renderWithdrawPreview);
   $("newEmployeeBtn").addEventListener("click", () => { if (ensureEdit()) { $("employeeForm").reset(); $("employeeId").value = ""; $("employeeDialog").showModal(); } });
   $("newItemBtn").addEventListener("click", () => { if (ensureEdit()) { $("itemForm").reset(); $("itemId").value = ""; $("itemDialog").showModal(); } });
   $("newUserBtn").addEventListener("click", () => { if (ensureEdit()) { $("userForm").reset(); $("userId").value = ""; $("userDialog").showModal(); } });
-  $("signTodayBtn").addEventListener("click", () => openSignature($("custodyEmployee").value));
   $("withdrawForm").addEventListener("submit", registerWithdraw);
   $("returnForm").addEventListener("submit", registerReturn);
   $("employeeForm").addEventListener("submit", saveEmployee);
