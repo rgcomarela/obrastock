@@ -247,7 +247,12 @@ function openLoans(employeeId = "") {
 function renderSelects() {
   const employees = activeEmployees();
   const employeeOptions = employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)} - ${escapeHtml(e.team || "sem equipe")}</option>`).join("");
-  ["withdrawEmployee", "returnEmployee", "custodyEmployee", "reportEmployee"].forEach((id) => $(id).innerHTML = employeeOptions);
+  ["withdrawEmployee", "returnEmployee", "custodyEmployee", "reportEmployee"].forEach((id) => {
+    const select = $(id);
+    const selected = select.value;
+    select.innerHTML = employeeOptions;
+    if (employees.some((e) => e.id === selected)) select.value = selected;
+  });
   $("withdrawItemOptions").innerHTML = db.items
     .filter((i) => num(i.stock) > 0 && !["Avariado", "Em manutenção"].includes(i.status))
     .map((i) => `<option value="${escapeHtml(i.name)}" label="${escapeHtml(i.code || i.id)} - ${i.stock} ${escapeHtml(i.unit)}"></option>`)
@@ -730,7 +735,8 @@ function wire() {
   $("backupBtn").addEventListener("click", backup);
   $("restoreInput").addEventListener("change", restore);
   ["employeeSearch", "itemSearch", "historySearch", "custodySearch", "withdrawSearch"].forEach((id) => $(id).addEventListener("input", render));
-  ["historyDate", "historyType", "onlyOpen", "returnEmployee", "custodyEmployee", "withdrawEmployee", "reportType", "reportEmployee"].forEach((id) => $(id).addEventListener("change", render));
+  ["historyDate", "historyType", "onlyOpen", "returnEmployee", "custodyEmployee", "reportType", "reportEmployee"].forEach((id) => $(id).addEventListener("change", render));
+  $("withdrawEmployee").addEventListener("change", renderWithdrawPreview);
   $("newEmployeeBtn").addEventListener("click", () => { if (ensureEdit()) { $("employeeForm").reset(); $("employeeId").value = ""; $("employeeDialog").showModal(); } });
   $("newItemBtn").addEventListener("click", () => { if (ensureEdit()) { $("itemForm").reset(); $("itemId").value = ""; $("itemDialog").showModal(); } });
   $("newUserBtn").addEventListener("click", () => { if (ensureEdit()) { $("userForm").reset(); $("userId").value = ""; $("userDialog").showModal(); } });
