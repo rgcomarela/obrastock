@@ -279,6 +279,9 @@ function renderDashboard() {
   const late = loans.filter((l) => daysSince(l.date) > db.settings.lateDays);
   const damaged = db.items.filter((i) => ["Avariado", "Em manutenção"].includes(i.status) || ["Avariado", "Em manutenção"].includes(i.condition));
   const low = db.items.filter((i) => num(i.stock) <= (i.minStock ?? 1));
+  const almoxView = currentUser.level === "Almoxarife";
+  $("recentPanel").classList.toggle("hidden", almoxView);
+  $("usagePanel").classList.toggle("hidden", almoxView);
   $("metricBorrowed").textContent = loans.reduce((sum, l) => sum + num(l.openQty), 0);
   $("metricCustodies").textContent = new Set(loans.map((l) => l.employeeId)).size;
   $("metricLate").textContent = late.length;
