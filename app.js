@@ -376,7 +376,7 @@ function renderEmployees() {
       <div><h4>${escapeHtml(e.name)}</h4><div class="meta">${escapeHtml(e.id)} - ${escapeHtml(e.team || "Sem equipe")}</div></div></header>
       <div class="meta">${escapeHtml(e.role || "Sem cargo")} - ${escapeHtml(e.phone || "Sem telefone")}</div>
       <span class="tag ${e.status === "Ativo" ? "ok" : "bad"}">${escapeHtml(e.status)}</span>
-      <div class="row-actions">${canManageEmployees() ? `<button class="secondary" onclick="editEmployee('${e.id}')">Editar</button>` : ""}<button class="ghost" onclick="openEmployeeCustody('${e.id}')">Cautela</button></div>
+      <div class="row-actions">${canManageEmployees() ? `<button class="secondary" onclick="editEmployee('${e.id}')">Editar</button><button class="ghost danger" onclick="deleteEmployee('${e.id}')">Excluir</button>` : ""}<button class="ghost" onclick="openEmployeeCustody('${e.id}')">Cautela</button></div>
     </article>`).join("") || empty("Nenhum funcionário encontrado.");
 }
 
@@ -660,6 +660,17 @@ window.editEmployee = (id) => {
   if (!e) return;
   $("employeeId").value = e.id; $("employeeName").value = e.name; $("employeeRole").value = e.role; $("employeePhone").value = e.phone; $("employeeTeam").value = e.team; $("employeeStatus").value = e.status;
   $("employeeDialog").showModal();
+};
+
+window.deleteEmployee = async (id) => {
+  if (!ensureManageEmployees()) return;
+  const employee = employeeById(id);
+  if (!employee) return;
+  if (openLoans(id).length) return toast("Não é possível excluir funcionário com itens em posse.");
+  if (!confirm(`Excluir ${employee.name}? O histórico antigo continuará registrado.`)) return;
+  db.employees = db.employees.filter((e) => e.id !== id);
+  await saveDb();
+  toast("Funcionário excluído.");
 };
 
 window.editItem = (id) => {
