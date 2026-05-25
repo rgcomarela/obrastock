@@ -167,9 +167,19 @@ function canEdit() {
   return currentUser && currentUser.level !== "Visualização";
 }
 
+function canManageEmployees() {
+  return currentUser && currentUser.level === "Administrador";
+}
+
 function ensureEdit() {
   if (canEdit()) return true;
   toast("Usuário de visualização não altera registros.");
+  return false;
+}
+
+function ensureManageEmployees() {
+  if (canManageEmployees()) return true;
+  toast("Apenas administrador cadastra ou edita funcionários.");
   return false;
 }
 
@@ -356,13 +366,14 @@ window.goReturnFromCustody = (employeeId) => {
 function renderEmployees() {
   const term = $("employeeSearch").value?.toLowerCase() || "";
   const employees = db.employees.filter((e) => `${e.name} ${e.role} ${e.team}`.toLowerCase().includes(term));
+  $("newEmployeeBtn").classList.toggle("hidden", !canManageEmployees());
   $("employeeList").innerHTML = employees.map((e) => `
     <article class="person-card">
       <header>${e.photo ? `<img class="avatar" src="${e.photo}" alt="">` : `<div class="avatar">${initials(e.name)}</div>`}
       <div><h4>${escapeHtml(e.name)}</h4><div class="meta">${escapeHtml(e.id)} - ${escapeHtml(e.team || "Sem equipe")}</div></div></header>
       <div class="meta">${escapeHtml(e.role || "Sem cargo")} - ${escapeHtml(e.phone || "Sem telefone")}</div>
       <span class="tag ${e.status === "Ativo" ? "ok" : "bad"}">${escapeHtml(e.status)}</span>
-      <div class="row-actions"><button class="secondary" onclick="editEmployee('${e.id}')">Editar</button><button class="ghost" onclick="openEmployeeCustody('${e.id}')">Cautela</button></div>
+      <div class="row-actions">${canManageEmployees() ? `<button class="secondary" onclick="editEmployee('${e.id}')">Editar</button>` : ""}<button class="ghost" onclick="openEmployeeCustody('${e.id}')">Cautela</button></div>
     </article>`).join("") || empty("Nenhum funcionário encontrado.");
 }
 
@@ -600,7 +611,7 @@ function roundQty(value) {
 
 async function saveEmployee(event) {
   event.preventDefault();
-  if (!ensureEdit()) return;
+  if (!ensureManageEmployees()) return;
   const id = $("employeeId").value || uid("FUN", "employee");
   const existing = employeeById(id);
   const photo = await readFileAsDataUrl($("employeePhoto"));
@@ -641,6 +652,7 @@ async function saveUser(event) {
 }
 
 window.editEmployee = (id) => {
+  if (!ensureManageEmployees()) return;
   const e = employeeById(id);
   if (!e) return;
   $("employeeId").value = e.id; $("employeeName").value = e.name; $("employeeRole").value = e.role; $("employeePhone").value = e.phone; $("employeeTeam").value = e.team; $("employeeStatus").value = e.status;
@@ -834,7 +846,7 @@ function wire() {
     }
     renderWithdrawPreview();
   });
-  $("newEmployeeBtn").addEventListener("click", () => { if (ensureEdit()) { $("employeeForm").reset(); $("employeeId").value = ""; $("employeeDialog").showModal(); } });
+  $("newEmployeeBtn").addEventListener("click", () => { if (ensureManageEmployees()) { $("employeeForm").reset(); $("employeeId").value = ""; $("employeeDialog").showModal(); } });
   $("newItemBtn").addEventListener("click", () => { if (ensureEdit()) { $("itemForm").reset(); $("itemId").value = ""; $("itemDialog").showModal(); } });
   $("newUserBtn").addEventListener("click", () => { if (ensureEdit()) { $("userForm").reset(); $("userId").value = ""; $("userDialog").showModal(); } });
   $("withdrawForm").addEventListener("submit", addDeliveryItem);
