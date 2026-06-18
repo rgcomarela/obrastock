@@ -31,6 +31,7 @@ let db = structuredClone(seed);
 let currentUser = null;
 let activeView = "dashboard";
 let cloudReady = false;
+let localOnlyChanges = false;
 let signaturePad = null;
 let selectedCustodyEmployeeId = "";
 let deliveryCart = [];
@@ -115,11 +116,45 @@ async function saveDb() {
       body: JSON.stringify({ data: db, updated_at: new Date().toISOString() })
     });
     cloudReady = true;
+    localOnlyChanges = false;
+    updateCloudLabel();
+    return true;
   } catch (error) {
     cloudReady = false;
+    localOnlyChanges = true;
+    updateCloudLabel();
     console.warn("Falha ao salvar online.", error);
     toast("Sem conexão online. Salvo neste aparelho.");
+    return false;
   }
+}
+
+async function syncFromCloud({ force = false, silent = false } = {}) {
+  if (localOnlyChanges && !force) {
+    if (!silent) toast("Existem alterações salvas só neste aparelho. Faça backup antes de atualizar.");
+    return false;
+  }
+  const cloud = await loadCloudDb();
+  if (!cloud) {
+    if (!silent) toast("Não foi possível atualizar online.");
+    updateCloudLabel();
+    return false;
+  }
+  db = normalizeDb(cloud);
+  localStorage.setItem(STORE_KEY, JSON.stringify(db));
+  cloudReady = true;
+  localOnlyChanges = false;
+  updateCloudLabel();
+  render();
+  if (!silent) toast("Dados atualizados.");
+  return true;
+}
+
+function updateCloudLabel() {
+  if (!currentUser || !$("currentUserLabel")) return;
+  const status = cloudReady ? "online" : "local";
+  const pending = localOnlyChanges ? " - pendente" : "";
+  $("currentUserLabel").textContent = `${currentUser.name} - ${currentUser.level} - ${status}${pending}`;
 }
 
 function uid(prefix, counter) {
@@ -622,10 +657,10 @@ async function saveEmployee(event) {
   const photo = await readFileAsDataUrl($("employeePhoto"));
   const record = { id, name, role: $("employeeRole").value.trim(), phone: $("employeePhone").value.trim(), team: $("employeeTeam").value.trim(), status: $("employeeStatus").value, photo: photo || existing?.photo || "" };
   if (existing) Object.assign(existing, record); else db.employees.push(record);
-  await saveDb();
+  const savedOnline = await saveDb();
   $("employeeDialog").close();
   $("employeeForm").reset();
-  toast("Funcionário salvo.");
+  toast(savedOnline ? "Funcionário salvo online." : "Funcionário salvo só neste aparelho.");
 }
 
 async function saveItem(event) {
@@ -833,7 +868,7 @@ async function initAuth() {
 function showApp() {
   $("loginScreen").classList.add("hidden");
   $("appShell").classList.remove("hidden");
-  $("currentUserLabel").textContent = `${currentUser.name} - ${currentUser.level}${cloudReady ? " - online" : " - local"}`;
+  updateCloudLabel();
   document.body.classList.toggle("dark", !!db.settings.dark);
   render();
 }
@@ -852,6 +887,7 @@ function wire() {
   $("quickWithdrawBtn").addEventListener("click", () => setView("withdraw"));
   $("quickReturnBtn").addEventListener("click", () => setView("return"));
   $("themeToggle").addEventListener("click", () => { db.settings.dark = !db.settings.dark; document.body.classList.toggle("dark", db.settings.dark); saveDb(); });
+  $("syncBtn").addEventListener("click", () => syncFromCloud({ force: true }));
   $("backupBtn").addEventListener("click", backup);
   $("restoreInput").addEventListener("change", restore);
   ["employeeSearch", "itemSearch", "historySearch", "custodySearch", "withdrawSearch"].forEach((id) => $(id).addEventListener("input", render));
@@ -885,6 +921,14 @@ function wire() {
 
 wire();
 initAuth();
+
+window.addEventListener("focus", () => {
+  if (currentUser) syncFromCloud({ silent: true });
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && currentUser) syncFromCloud({ silent: true });
+});
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
