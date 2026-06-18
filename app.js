@@ -41,7 +41,6 @@ let pendingDeliveryAfterSignature = false;
 const $ = (id) => document.getElementById(id);
 const num = (v) => Number.parseFloat(v || 0);
 const todayKey = () => new Date().toISOString().slice(0, 10);
-const isOfficialHost = () => location.hostname === "obrastock.vercel.app" || location.hostname.endsWith(".vercel.app");
 
 function normalizeDb(value = {}) {
   const base = structuredClone(seed);
@@ -65,20 +64,15 @@ function statusFromItem(item) {
 }
 
 async function supabaseRequest(path, options = {}) {
-  const proxyStatePath = path.startsWith("obrastock_state");
-  const url = isOfficialHost() && proxyStatePath ? "/api/state" : `${SUPABASE_URL}/rest/v1/${path}`;
-  const headers = isOfficialHost() && proxyStatePath
-    ? { "Content-Type": "application/json", ...(options.headers || {}) }
-    : {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-        ...(options.headers || {})
-      };
-  const response = await fetch(url, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
-    headers
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...(options.headers || {})
+    }
   });
   if (!response.ok) throw new Error(await response.text());
   if (response.status === 204) return null;
