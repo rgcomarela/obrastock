@@ -219,7 +219,7 @@
   </div>
 
   <dialog id="employeeDialog">
-    <form id="employeeForm" method="dialog" class="modal-form">
+    <form id="employeeForm" class="modal-form">
       <h3>Funcionário</h3>
       <input type="hidden" id="employeeId">
       <label>Nome<input id="employeeName" required></label>
@@ -228,7 +228,7 @@
       <label>Equipe<input id="employeeTeam"></label>
       <label>Status<select id="employeeStatus"><option>Ativo</option><option>Inativo</option></select></label>
       <label>Foto opcional<input id="employeePhoto" type="file" accept="image/*"></label>
-      <div class="modal-actions"><button type="button" class="ghost" data-close>Cancelar</button><button class="primary" value="default">Salvar</button></div>
+      <div class="modal-actions"><button type="button" class="ghost" data-close>Cancelar</button><button type="submit" class="primary">Salvar</button></div>
     </form>
   </dialog>
 

@@ -615,14 +615,17 @@ function roundQty(value) {
 async function saveEmployee(event) {
   event.preventDefault();
   if (!ensureManageEmployees()) return;
+  const name = $("employeeName").value.trim();
+  if (!name) return toast("Informe o nome do funcionário.");
   const id = $("employeeId").value || uid("FUN", "employee");
   const existing = employeeById(id);
   const photo = await readFileAsDataUrl($("employeePhoto"));
-  const record = { id, name: $("employeeName").value.trim(), role: $("employeeRole").value.trim(), phone: $("employeePhone").value.trim(), team: $("employeeTeam").value.trim(), status: $("employeeStatus").value, photo: photo || existing?.photo || "" };
+  const record = { id, name, role: $("employeeRole").value.trim(), phone: $("employeePhone").value.trim(), team: $("employeeTeam").value.trim(), status: $("employeeStatus").value, photo: photo || existing?.photo || "" };
   if (existing) Object.assign(existing, record); else db.employees.push(record);
+  await saveDb();
   $("employeeDialog").close();
   $("employeeForm").reset();
-  await saveDb();
+  toast("Funcionário salvo.");
 }
 
 async function saveItem(event) {
