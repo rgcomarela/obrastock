@@ -538,11 +538,16 @@ function renderReports() {
   const popular = {};
   db.movements.filter((m) => m.type === "RETIRADA").flatMap((m) => m.items).forEach((i) => popular[i.name] = (popular[i.name] || 0) + num(i.qty));
   const popularRows = Object.entries(popular).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!$("reportDate").value) $("reportDate").value = todayKey();
+  $("reportDate").classList.toggle("hidden", $("reportType").value !== "daily");
+  $("reportEmployee").classList.toggle("hidden", $("reportType").value !== "individual");
+  const dailyRows = dailyDeliveryRows($("reportDate").value);
   $("reportsContent").innerHTML = `
     <article class="report-card"><h4>Itens sob responsabilidade</h4><strong>${loans.length}</strong><div class="meta">${loans.map((l) => `${escapeHtml(l.employeeName)}: ${escapeHtml(l.name)} (${l.openQty})`).join("<br>") || "Sem cautelas abertas"}</div></article>
     <article class="report-card"><h4>Mais utilizados</h4><div class="meta">${popularRows.map(([name, total]) => `${escapeHtml(name)}: ${total}`).join("<br>") || "Sem movimentações"}</div></article>
     <article class="report-card"><h4>Avariados/manutenção</h4><strong>${damaged.length}</strong><div class="meta">${damaged.map((i) => `${escapeHtml(i.name)} - ${escapeHtml(i.status)}`).join("<br>") || "Nenhum registro"}</div></article>
     <article class="report-card"><h4>Assinaturas do dia</h4><strong>${db.signatures.filter((s) => s.date === todayKey()).length}</strong><div class="meta">Funcionários que assinaram a cautela diária.</div></article>`;
+  $("reportsContent").insertAdjacentHTML("beforeend", `<article class="report-card"><h4>Resumo do dia</h4><strong>${dailyRows.length}</strong><div class="meta">${dailyRows.map(([name, movements]) => `${escapeHtml(name)}: ${movements.reduce((sum, m) => sum + (m.items?.length || 0), 0)} item(ns)`).join("<br>") || "Sem entregas nesta data."}</div></article>`);
 }
 
 function renderUsers() {
@@ -828,6 +833,35 @@ function clearSignature() {
   signaturePad.context.fillRect(0, 0, signaturePad.canvas.width, signaturePad.canvas.height);
 }
 
+function dailyDeliveryRows(dateKey) {
+  const grouped = new Map();
+  db.movements
+    .filter((m) => m.type === "RETIRADA" && m.date?.slice(0, 10) === dateKey)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .forEach((movement) => {
+      if (!grouped.has(movement.employeeName)) grouped.set(movement.employeeName, []);
+      grouped.get(movement.employeeName).push(movement);
+    });
+  return [...grouped.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+}
+
+function printDailySummary() {
+  const date = $("reportDate").value || todayKey();
+  const rows = dailyDeliveryRows(date);
+  $("printArea").innerHTML = `<section class="receipt-page daily-summary">
+    <div class="receipt-head"><div><h1>ObraStock</h1><strong>RESUMO DIÁRIO DE ENTREGA DE FERRAMENTAS</strong></div><div class="receipt-meta">${new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR")}<br>Gerado em ${formatDate(new Date().toISOString())}</div></div>
+    <div class="receipt-box"><strong>Total:</strong> ${rows.length} funcionário(s) com entrega registrada nesta data.</div>
+    ${rows.map(([employeeName, movements]) => `<section class="daily-employee">
+      <h3>${escapeHtml(employeeName)}</h3>
+      <table><thead><tr><th>Horário</th><th>Itens retirados</th><th>Responsável</th><th>Protocolo</th></tr></thead><tbody>
+        ${movements.map((m) => `<tr><td>${new Date(m.date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td><td>${(m.items || []).map((i) => `${escapeHtml(i.name)} - ${i.qty} ${escapeHtml(i.unit || "")}`).join("<br>")}</td><td>${escapeHtml(m.keeper || m.userName || "-")}</td><td>${escapeHtml(m.protocol || "-")}</td></tr>`).join("")}
+      </tbody></table>
+    </section>`).join("") || "<p>Sem entregas registradas nesta data.</p>"}
+    <div class="signature-grid"><div class="signature">Assinatura do almoxarife</div><div class="signature">Conferência</div></div>
+  </section>`;
+  setTimeout(() => window.print(), 80);
+}
+
 function reportRows() {
   const type = $("reportType").value;
   const employeeId = $("reportEmployee").value;
@@ -840,6 +874,7 @@ function reportRows() {
 }
 
 function printReport() {
+  if ($("reportType").value === "daily") return printDailySummary();
   const rows = reportRows();
   const loans = $("reportType").value === "individual" ? openLoans($("reportEmployee").value) : openLoans();
   const signatures = db.signatures.filter((s) => rows.some((m) => m.signatureId === s.id || m.employeeId === s.employeeId));
@@ -929,7 +964,7 @@ function wire() {
   $("backupBtn").addEventListener("click", backup);
   $("restoreInput").addEventListener("change", restore);
   ["employeeSearch", "itemSearch", "historySearch", "custodySearch", "withdrawSearch"].forEach((id) => $(id).addEventListener("input", render));
-  ["historyDate", "historyType", "onlyOpen", "returnEmployee", "reportType", "reportEmployee"].forEach((id) => $(id).addEventListener("change", render));
+  ["historyDate", "historyType", "onlyOpen", "returnEmployee", "reportType", "reportDate", "reportEmployee"].forEach((id) => $(id).addEventListener("change", render));
   $("withdrawEmployee").addEventListener("change", () => {
     if (deliveryCart.length && $("withdrawEmployee").value !== deliveryCartEmployeeId) {
       $("withdrawEmployee").value = deliveryCartEmployeeId;

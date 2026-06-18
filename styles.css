@@ -497,6 +497,8 @@ dialog::backdrop { background: rgba(8, 13, 20, .58); }
   .receipt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
   .receipt-box { border: 1px solid #9aa6b2; padding: 9px; min-height: 46px; }
   .receipt-page table { min-width: 0; font-size: 12px; }
+  .daily-employee { break-inside: avoid; margin-top: 16px; }
+  .daily-employee h3 { margin: 0 0 6px; font-size: 16px; color: #10243f; }
   .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 42px; }
   .signature { border-top: 1px solid #111; text-align: center; padding-top: 8px; min-height: 56px; }
   .report-signatures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }

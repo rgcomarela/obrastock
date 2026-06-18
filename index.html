@@ -200,10 +200,12 @@
       <section id="reports" class="view">
         <div class="toolbar filters">
           <select id="reportType">
+            <option value="daily">Resumo do dia</option>
             <option value="weekly">Relatório semanal</option>
             <option value="monthly">Relatório mensal</option>
             <option value="individual">Relatório individual</option>
           </select>
+          <input id="reportDate" type="date">
           <select id="reportEmployee"></select>
           <button id="printReportBtn" class="primary">Gerar PDF A4</button>
           <button id="exportExcelBtn" class="secondary">Exportar Excel</button>
