@@ -32,6 +32,7 @@ let currentUser = null;
 let activeView = "dashboard";
 let cloudReady = false;
 let localOnlyChanges = false;
+let lastCloudError = "";
 let signaturePad = null;
 let selectedCustodyEmployeeId = "";
 let deliveryCart = [];
@@ -84,14 +85,17 @@ async function loadCloudDb() {
     const rows = await supabaseRequest(`obrastock_state?id=eq.${SUPABASE_STATE_ID}&select=data`);
     if (rows?.[0]?.data) {
       cloudReady = true;
+      lastCloudError = "";
       return rows[0].data;
     }
     await supabaseRequest("obrastock_state", { method: "POST", body: JSON.stringify({ id: SUPABASE_STATE_ID, data: seed }) });
     cloudReady = true;
+    lastCloudError = "";
     return structuredClone(seed);
   } catch (error) {
     console.warn("Supabase indisponível, usando cache local.", error);
     cloudReady = false;
+    lastCloudError = cloudErrorText(error);
     return null;
   }
 }
@@ -117,14 +121,40 @@ async function saveDb() {
     });
     cloudReady = true;
     localOnlyChanges = false;
+    lastCloudError = "";
     updateCloudLabel();
     return true;
   } catch (error) {
     cloudReady = false;
     localOnlyChanges = true;
+    lastCloudError = cloudErrorText(error);
     updateCloudLabel();
     console.warn("Falha ao salvar online.", error);
-    toast("Sem conexão online. Salvo neste aparelho.");
+    toast(`Salvo só neste aparelho. ${lastCloudError}`);
+    return false;
+  }
+}
+
+async function uploadLocalToCloud() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(db));
+  try {
+    await supabaseRequest(`obrastock_state?id=eq.${SUPABASE_STATE_ID}`, {
+      method: "PATCH",
+      body: JSON.stringify({ data: db, updated_at: new Date().toISOString() })
+    });
+    cloudReady = true;
+    localOnlyChanges = false;
+    lastCloudError = "";
+    updateCloudLabel();
+    toast("Dados enviados para a nuvem.");
+    return true;
+  } catch (error) {
+    cloudReady = false;
+    localOnlyChanges = true;
+    lastCloudError = cloudErrorText(error);
+    updateCloudLabel();
+    console.warn("Falha ao enviar para nuvem.", error);
+    toast(`Não enviou para a nuvem. ${lastCloudError}`);
     return false;
   }
 }
@@ -136,7 +166,7 @@ async function syncFromCloud({ force = false, silent = false } = {}) {
   }
   const cloud = await loadCloudDb();
   if (!cloud) {
-    if (!silent) toast("Não foi possível atualizar online.");
+    if (!silent) toast(`Não foi possível baixar. ${lastCloudError || "Verifique a conexão."}`);
     updateCloudLabel();
     return false;
   }
@@ -155,6 +185,13 @@ function updateCloudLabel() {
   const status = cloudReady ? "online" : "local";
   const pending = localOnlyChanges ? " - pendente" : "";
   $("currentUserLabel").textContent = `${currentUser.name} - ${currentUser.level} - ${status}${pending}`;
+}
+
+function cloudErrorText(error) {
+  const message = String(error?.message || error || "").replace(/\s+/g, " ").trim();
+  if (!message) return "Erro de conexão com o banco.";
+  if (message.includes("Failed to fetch") || message.includes("NetworkError")) return "Sem acesso ao Supabase.";
+  return message.length > 120 ? `${message.slice(0, 120)}...` : message;
 }
 
 function uid(prefix, counter) {
@@ -888,6 +925,7 @@ function wire() {
   $("quickReturnBtn").addEventListener("click", () => setView("return"));
   $("themeToggle").addEventListener("click", () => { db.settings.dark = !db.settings.dark; document.body.classList.toggle("dark", db.settings.dark); saveDb(); });
   $("syncBtn").addEventListener("click", () => syncFromCloud({ force: true }));
+  $("uploadCloudBtn").addEventListener("click", uploadLocalToCloud);
   $("backupBtn").addEventListener("click", backup);
   $("restoreInput").addEventListener("change", restore);
   ["employeeSearch", "itemSearch", "historySearch", "custodySearch", "withdrawSearch"].forEach((id) => $(id).addEventListener("input", render));
